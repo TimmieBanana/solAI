@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <title>SolarPro | Architectural Engine</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
+    
     <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
         <div class="tab-header">
             <button class="tab-link active" onclick="openTab(event, 'tab-overview')">DATA</button>
             <button class="tab-link" onclick="openTab(event, 'tab-financial')">FINANCE</button>
-            <button class="tab-link" onclick="openTab(event, 'tab-graph')">PROJECTION</button>
+            <button class="tab-link" onclick="openTab(event, 'tab-regulations')">AI REGULATIONS</button> <button class="tab-link" onclick="openTab(event, 'tab-graph')">PROJECTION</button>
             <button class="tab-link" onclick="openTab(event, 'tab-config')">INPUTS</button>
         </div>
 
@@ -54,6 +54,11 @@
                     <span class="label">BREAK-EVEN PERIOD</span>
                 </div>
             </div>
+        </div>
+
+        <div id="tab-regulations" class="tab-content">
+            <div id="reg-content" class="reg-container">
+                </div>
         </div>
 
         <div id="tab-graph" class="tab-content">
