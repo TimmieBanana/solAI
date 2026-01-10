@@ -1,5 +1,5 @@
 // --- 1. CONFIGURATION ---
-const API_KEY = 'k8DnL4rHFRSvHVOjdsle'; // Your Key
+const API_KEY = 'MAP API KEY HERE'; // Your Key
 
 // --- 2. GLOBAL STATE ---
 let map;
@@ -336,5 +336,6 @@ function resetView() {
     resetLayers();
     ['val_area','val_panels','val_capacity','val_cost','val_savings'].forEach(id => document.getElementById(id).innerText = "0");
 }
+
 
 initMap();
