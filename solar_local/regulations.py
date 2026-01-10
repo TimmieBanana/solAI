@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 
 # YOUR API KEY
-api_key = "AIzaSyDrhi0JFYgnxqBbZ3RSdcvFTlxrZJA1B_g"
+api_key = "GEMINI API HERE"
 
 load_dotenv()
 
@@ -78,5 +78,6 @@ class RegulationsFinder:
             except Exception as e:
                 print(f"⚠️ AI Error: {e}. Retrying ({attempt + 1}/{attempts})...")
                 time.sleep(2)
+
 
         return {"sucsess": False, "summary": "Could not retrieve regulations for this location."}
