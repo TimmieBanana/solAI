@@ -53,6 +53,14 @@ body {
 }
 
 /* INPUTS */
+.input-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: -4px 0 10px 0;
+}
 .input-group { display: flex; gap: 8px; margin-bottom: 16px; }
 
 input, select {
@@ -151,9 +159,81 @@ button:hover { background: #2563eb; transform: translateY(-1px); }
     font-size: 10px; font-weight: 700; color: var(--text-muted);
     text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 8px 0;
 }
+.section-header:first-child {
+    margin-top: 0;
+}
+
+/* Instructions */
+.reg-instructions {
+    font-size: 11px; line-height: 1.6; color: var(--text-main);
+    background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px;
+    border: 1px solid var(--border); margin-bottom: 16px;
+    white-space: pre-line;
+}
+
+/* Additional Costs - Integrated Styling */
+.costs-container {
+    background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px; margin-bottom: 16px;
+}
+.cost-item {
+    display: flex; flex-direction: column; padding: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05); 
+    transition: background 0.2s;
+}
+.cost-item:last-child {
+    border-bottom: none;
+}
+.cost-item:hover {
+    background: rgba(255,255,255,0.03);
+}
+.cost-name {
+    font-size: 11px; font-weight: 600; color: white; margin-bottom: 4px;
+}
+.cost-price {
+    font-size: 13px; font-weight: 600; color: var(--primary); 
+    margin-bottom: 2px;
+}
+.cost-desc {
+    font-size: 10px; color: var(--text-muted); line-height: 1.4; 
+    margin-top: 4px;
+}
+
+/* Links */
+.links-container {
+    display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;
+}
+.reg-link {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 10px 12px; border-radius: 6px; text-decoration: none;
+    transition: all 0.2s; color: var(--text-main);
+}
+.reg-link:hover {
+    background: rgba(59, 130, 246, 0.2); border-color: var(--primary);
+    transform: translateX(2px);
+}
+.link-icon {
+    font-size: 12px; color: var(--primary);
+}
+.link-name {
+    font-size: 11px; font-weight: 500; flex: 1;
+    color: var(--text-main);
+}
+.reg-link:hover .link-name {
+    color: white;
+}
 
 /* CHART */
-.chart-container { height: 200px; width: 100%; margin-top: 10px; }
+.chart-container { height: 200px; width: 100%; margin-top: 10px; position: relative; }
+.chart-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.01);
+}
 
 /* RESET BUTTON */
 .reset-btn {

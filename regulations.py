@@ -5,44 +5,63 @@ import os
 
 # --- CONFIGURATION ---
 # We hardcode it here to prevent the "Missing key" error
-API_KEY = "AIzaSyAi90hk4pdzcAoNZt6smXuzQ4ksHJ1G01Q"
+API_KEY = "AIzaSyDa5yuzg44jJ59hVCZE979s9NRRDXGrJ6g"
 
 SYSTEM_PROMPT = """
-You are a Geo-Regulatory Solar AI. Your ONLY goal is to provide local regulations based on specific coordinates.
+You are a Senior Solar Regulatory Consultant. Your goal is to provide **realistic, actionable** local regulations and **estimated costs** for solar installations.
 
 INPUT COORDINATES: Latitude {lat}, Longitude {lon}
 
 TASK:
-1. IDENTIFY THE LOCATION: Determine the exact City, Region, and Country for these coordinates.
-2. RETRIEVE LOCAL LAWS: specific to THAT identified city/country.
-3. FORMAT OUTPUT: Return a strict JSON dictionary.
+1. IDENTIFY LOCATION: Exact City, Region, Authority (e.g., DEWA for Dubai, ConEd for NY).
+2. RETRIEVE LAWS: Specific permits required.
+3. ESTIMATE COSTS: **NEVER RETURN 0.** You must provide industry-standard estimates if exact official fees are unavailable.
 
-CRITICAL RULES:
-- IF the coordinates are in India (e.g., Taj Mahal), give regulations for INDIA (MNRE, State Discoms).
-- IF the coordinates are in the US, give regulations for that State/County (NEC, HOA rules).
-- IF the coordinates are in Dubai, give regulations for DEWA/Shams Dubai.
-- DO NOT default to Dubai unless the coordinates are actually in Dubai.
+4. Approvals ('approvals')
+   - Each approval is a dict with:
+     - 'approval_name': name of the approval
+     - 'required': True or False
+     - 'explanation': 1 sentence explaining why it is required or not
+   - Add any other relevant approvals if needed for this location.
+
+5. Instructions ('instructions')
+   - Single small paragraph telling the user how to comply with the regulations, dont use any bold "**".
+
+6. References / Links ('links')
+   - Always include at least these two if available:
+     1. "Official Regulation Page"
+     2. "Guidelines PDF"
+   - Include any additional links only if necessary for understanding.
+   - Each link is a dict: 'name' and 'link'.
 
 OUTPUT FORMAT (JSON ONLY):
 {{
-    "location": "<Detected City, Country>",
-    "summary": "<Specific summary for this location>",
+    "location": "<City, Country>",
+    "summary": "<2-sentence summary of the regulatory environment>",
     "approvals": [
-        {{ "approval_name": "<Local Permit Name>", "required": true, "explanation": "<Why it is needed>" }},
-        {{ "approval_name": "<Grid Interconnection Name>", "required": true, "explanation": "<Utility requirement>" }}
+        {{ "approval_name": "<Permit Name>", "required": true, "explanation": "<Why it is needed>" }}
     ],
-    "restrictions": "<Specific restrictions (e.g. Heritage zones)>",
-    "instructions": "<Step-by-step compliance>",
     "additional_costs": [
-        {{ "cost_name": "<Fee Name>", "price": 0, "currency": "<Local Currency>", "description": "..." }}
+        {{ "cost_name": "<Fee Name>", "price": <NUMBER_ONLY>, "currency": "<ISO_CODE>", "description": "<Brief detail>" }}
     ],
+    "instructions": "<Step-by-step compliance>",
+    ],
+    "earnings_per_kwh": {{
+        "amount": <numeric value in local currency per kWh>,
+        "currency": "<Local Currency Code (e.g., INR, AED, USD, EUR)>"
+    }},
+    "usd_to_local": <conversion rate from USD to local currency (e.g., 83.5 for INR, 3.67 for AED)>,
     "links": [
         {{ "name": "<Authority Website>", "link": "..." }}
-    ],
-    "ai_reasoning": "Detected location as <City>. Applied regulations from <Authority>."
+    ]
 }}
-"""
 
+
+CRITICAL RULES:
+- **price** must be a number (e.g., 1500), not a string.
+- If specific fees are unknown, provide a realistic **estimate** (e.g., "Permit Fee", 300, "USD").
+- Do NOT return empty lists. Always find at least one likely permit and cost.
+"""
 
 class RegulationsFinder:
     def __init__(self):
@@ -51,42 +70,77 @@ class RegulationsFinder:
 
     def find_regulations(self, lat: float, lon: float, attempts: int = 3):
         print(f"🔎 AI Analyzing Coordinates: {lat}, {lon}...")
-
-        # 1. Prepare Prompt (Inject Coordinates)
         prompt = SYSTEM_PROMPT.format(lat=lat, lon=lon)
 
         for attempt in range(attempts):
+            ai_output = None
             try:
-                # 2. Call Gemini API
-                # Using standard Flash model
+                # 1. Call Gemini API
+                print(f"📡 Calling Gemini API (Attempt {attempt + 1}/{attempts})...")
                 response = self.client.models.generate_content(
                     model="gemini-2.5-flash",
                     contents=prompt
                 )
 
+                # 2. Safe Text Extraction
+                if not hasattr(response, 'text') or not response.text:
+                    print(f"⚠️ Empty response from API")
+                    raise ValueError("Empty response from API")
+                
                 ai_output = response.text
+                print(f"📄 Raw API response length: {len(ai_output)} characters")
 
-                # 3. Clean Markdown (Remove ```json ... ```)
+                # 3. Clean Markdown
                 if "```json" in ai_output:
                     ai_output = ai_output.split("```json")[1].split("```")[0]
                 elif "```" in ai_output:
                     ai_output = ai_output.split("```")[1].split("```")[0]
 
+                ai_output = ai_output.strip()
+                
+                if not ai_output:
+                    print(f"⚠️ Empty JSON after cleaning")
+                    raise ValueError("Empty JSON after cleaning markdown")
+
                 # 4. Parse JSON
-                json_response = json.loads(ai_output.strip())
+                json_response = json.loads(ai_output)
                 json_response["success"] = True
 
                 print(f"✅ Regulations Found for {json_response.get('location', 'Unknown')}")
                 return json_response
 
+            except json.JSONDecodeError as e:
+                print(f"⚠️ JSON Parse Error (Attempt {attempt + 1}): {e}")
+                if ai_output:
+                    print(f"📄 Problematic output: {ai_output[:200]}...")
+                if attempt == attempts - 1:
+                    # Last attempt failed, return error response
+                    return {
+                        "success": False,
+                        "summary": "AI Regulation Scan Failed: Invalid JSON response from API.",
+                        "location": "Unknown",
+                        "approvals": [],
+                        "additional_costs": []
+                    }
+                time.sleep(2)
             except Exception as e:
-                print(f"⚠️ AI Error (Attempt {attempt + 1}): {e}")
+                print(f"⚠️ AI Error (Attempt {attempt + 1}): {type(e).__name__}: {e}")
+                import traceback
+                traceback.print_exc()
+                if attempt == attempts - 1:
+                    # Last attempt failed, return error response
+                    return {
+                        "success": False,
+                        "summary": f"AI Regulation Scan Failed: {str(e)}",
+                        "location": "Unknown",
+                        "approvals": [],
+                        "additional_costs": []
+                    }
                 time.sleep(2)
 
-        # Fallback if AI fails
         return {
             "success": False,
-            "summary": "AI Regulation Scan Failed. Please try again.",
+            "summary": "AI Regulation Scan Failed after all attempts.",
             "location": "Unknown",
             "approvals": [],
             "additional_costs": []

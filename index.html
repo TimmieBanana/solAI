@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>SolarPro Enterprise | Site Analysis</title>
+    <title>SolAI Engine | Site Analysis</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
@@ -18,15 +18,17 @@
 
     <div class="hud">
         <div class="header">
-            <h1>SolarPro Enterprise</h1>
-            <span class="status">SYSTEM READY :: 3D ENGINE ACTIVE</span>
+            <h1>SolAI Engine</h1>
+            <span class="status">SYSTEM READY - 3D ENGINE ACTIVE</span>
         </div>
 
+        <div class="input-label">Location Search</div>
         <div class="input-group">
             <input type="text" id="locInput" value="Burj Khalifa" placeholder="ENTER SITE ADDRESS...">
             <button onclick="flyToLocation()">SCAN</button>
         </div>
 
+        <div class="input-label">Mount Type</div>
         <div class="input-group">
             <select id="installType" onchange="toggleInstallType()">
                 <option value="roof">MOUNT: ROOFTOP (AUTO-SNAP)</option>
@@ -34,10 +36,19 @@
             </select>
         </div>
 
+        <div class="input-label">Panel Type</div>
+        <div class="input-group">
+            <select id="panelType" onchange="updatePanelSelection()">
+                <option value="commercial">Panel: Commercial Poly (16%) - $180 USD</option>
+                <option value="premium" selected>Panel: Premium Mono (20%) - $250 USD</option>
+                <option value="advanced">Panel: Advanced N-Type (23%) - $350 USD</option>
+            </select>
+        </div>
+
         <button class="action-btn" id="drawBtn" onclick="toggleDraw()">[ + ] MANUAL DRAW MODE</button>
 
-        <button class="action-btn" id="scoutBtn" onclick="toggleScoutMode()" style="border-color: #f59e0b; color: #f59e0b; margin-top: -10px;">
-            📡 ACTIVATE THERMAL SCOUT
+        <button class="action-btn" id="scoutBtn" onclick="toggleScoutMode()" style="border-color: #f59e0b; color: #f59e0b;">
+            Enable Thermal View
         </button>
 
         <div class="tab-header">
@@ -100,12 +111,18 @@
         </div>
 
         <div id="tab-graph" class="tab-content">
+            <div style="text-align: center; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #00ccff; letter-spacing: 1px;">FUTURE PREDICTED STATS</h3>
+            </div>
             <div class="chart-container">
-                <canvas id="energyChart"></canvas>
+                <div id="chart-loading" class="chart-loading" style="display: flex; align-items: center; justify-content: center; height: 200px; flex-direction: column;">
+                    <div style="font-size: 13px; color: #94a3b8; margin-bottom: 8px;">Scan a site to see this graph</div>
+                </div>
+                <canvas id="energyChart" style="display: none;"></canvas>
             </div>
         </div>
 
-        <button class="reset-btn" onclick="resetView()">RESET SYSTEM</button>
+        <button class="reset-btn" onclick="resetView()">RESET</button>
     </div>
 
     <div class="cube-wrapper">

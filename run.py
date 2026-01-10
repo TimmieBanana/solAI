@@ -10,11 +10,9 @@ from solar_viability import analyze_solar_viability
 PORT = 8000
 reg_finder = RegulationsFinder()
 
-
 # --- FIX: ENABLE MULTI-THREADING ---
 class ThreadingHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
-
 
 class SolarRequestHandler(http.server.SimpleHTTPRequestHandler):
 
@@ -51,41 +49,49 @@ class SolarRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(result).encode('utf-8'))
         except Exception as e:
-            print(f"Server Error: {e}")
+            print(f"Server Error: {e}", flush=True) # FORCE FLUSH
             self.send_response(500)
             self.end_headers()
 
     # --- LOGIC HANDLERS ---
     def get_regulations(self, data):
-        print(f"🤖 AI Fetching Regulations...")
+        print(f"🤖 AI Fetching Regulations...", flush=True) # FORCE FLUSH
         return reg_finder.find_regulations(data.get('lat'), data.get('lon'))
 
     def run_prediction(self, data):
-        print(f"🔮 Training ML Model...")
-        return predict_solar_production(data.get('lat'), data.get('lon'))
+        lat = data.get('lat')
+        lon = data.get('lon')
+
+        # Extract Physics Data
+        capacity = data.get('capacity_kw', 5.0)
+        score = data.get('score', "MODERATE")
+
+        # Extract Financial Data (New)
+        cost = data.get('system_cost', 0)
+        maint = data.get('maintenance', 0)
+        rate = data.get('rate', 0.14)
+
+        print(f"🔮 Predicting Energy: {lat}, {lon} | Size: {capacity}kW | Cost: {cost}", flush=True) # FORCE FLUSH
+        return predict_solar_production(lat, lon, capacity, score, cost, maint, rate)
 
     def get_energy(self, data):
-        # Simple Math (Very Fast)
         return {"success": True}
 
     def run_viability_check(self, data):
-        print(f"📡 Downloading 3D Map Data...")
+        print(f"📡 Downloading 3D Map Data...", flush=True) # FORCE FLUSH
         return analyze_solar_viability(data.get('lat'), data.get('lon'))
 
     def end_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
         super().end_headers()
 
-
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     try:
-        # Use ThreadingHTTPServer instead of TCPServer
         ThreadingHTTPServer.allow_reuse_address = True
         with ThreadingHTTPServer(("", PORT), SolarRequestHandler) as httpd:
-            print(f"🚀 SolarPro Enterprise Active at http://localhost:{PORT}")
-            print(f"⚡ Multi-Threading Enabled (Parallel Processing)")
-            # webbrowser.open(f"http://localhost:{PORT}/index.html")
+            print(f"🚀 SolAI Engine Active at http://localhost:{PORT}", flush=True)
+            print(f"⚡ Multi-Threading Enabled (Parallel Processing)", flush=True)
             httpd.serve_forever()
     except OSError:
-        print(f"⚠️ Port {PORT} is busy. Stop other python processes.")
+        print(f"⚠️ Port {PORT} is busy. Stop other python processes.", flush=True)

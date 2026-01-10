@@ -145,80 +145,100 @@ function initMap() {
     });
 }
 
-// --- STRICT SEARCH SYSTEM (NO MORE RANDOM HIGHWAYS) ---
+// --- 4. SIMPLE & ACCURATE SEARCH ---
 async function flyToLocation() {
     const rawInput = document.getElementById('locInput').value.trim();
     if(!rawInput) return;
 
-    // Reset Highlights
+    // Reset UI
     map.getSource('target-highlight').setData({ type: 'FeatureCollection', features: [] });
 
-    // 1. CHECK FOR COORDINATES FIRST (Highest Reliability)
+    // 1. Direct Coordinate Search
     const coordMatch = rawInput.match(/^(-?\d+(\.\d+)?)[,\s]+(-?\d+(\.\d+)?)$/);
     if (coordMatch) {
         const lat = parseFloat(coordMatch[1]);
         const lon = parseFloat(coordMatch[3]);
-        executeFlyTo(lon, lat);
+
+        console.log("📍 Flying to Coords:", lat, lon);
+        executeDirectFly(lat, lon);
         return;
     }
 
-    // 2. TEXT SEARCH WITH FILTERS
+    // 2. Text Search with Filtering (Request multiple results)
     try {
         const query = encodeURIComponent(rawInput);
-        // Request 5 results to find the best one
+        // Request 5 results to find the best match
         const url = `https://api.maptiler.com/geocoding/${query}.json?key=${API_KEY}&limit=5`;
-
+        
         const res = await fetch(url);
         const data = await res.json();
 
         if (!data.features || data.features.length === 0) {
-            alert("No results found. Please try coordinates.");
+            alert("Location not found. Try entering specific coordinates or a more detailed address.");
             return;
         }
 
-        // --- FILTER LOGIC ---
-        // We iterate through results to find a 'building' or 'POI'.
-        // We IGNORE 'city', 'region', 'country' unless there is no other option.
-
+        // --- FILTER LOGIC: Prioritize specific locations over cities ---
         let validMatch = null;
 
-        // Pass 1: Look for exact Point of Interest (e.g. "School", "Mall")
+        // Pass 1: Look for Point of Interest (POI) or Building
         validMatch = data.features.find(f =>
-            f.place_type.includes('poi') ||
-            f.place_type.includes('building')
+            (f.place_type && (f.place_type.includes('poi') || f.place_type.includes('building')))
         );
 
-        // Pass 2: Look for Address (e.g. "Street 12")
+        // Pass 2: Look for Specific Address
         if (!validMatch) {
-            validMatch = data.features.find(f => f.place_type.includes('address'));
+            validMatch = data.features.find(f => 
+                f.place_type && f.place_type.includes('address')
+            );
         }
 
-        // Pass 3: If we only found a City/Region (e.g. "Sharjah, UAE"), we REJECT it.
-        // This prevents flying to random highway coordinates.
+        // Pass 3: Check if first result is a good match
         if (!validMatch) {
-            const genericMatch = data.features[0]; // The top generic result
-
-            // Allow if the user literally typed "Sharjah" or "Dubai"
-            if (rawInput.toLowerCase() === genericMatch.text.toLowerCase()) {
-                validMatch = genericMatch;
-            } else {
-                // If user typed "Sahara Centre" but we only found "Sharjah City"
-                const proceed = confirm(`⚠️ We couldn't find the exact building "${rawInput}".\n\nFound generic location: "${genericMatch.place_name}".\n\nFly there anyway?`);
-                if(proceed) validMatch = genericMatch;
-                else return; // Stop if user cancels
+            const firstResult = data.features[0];
+            
+            // If user typed something like "Birmingham University Dubai" but result is just "Dubai"
+            // Check if the result text matches closely with the input
+            const inputLower = rawInput.toLowerCase();
+            const resultTextLower = (firstResult.text || '').toLowerCase();
+            const placeNameLower = (firstResult.place_name || '').toLowerCase();
+            
+            // If the result contains key words from the input, it's probably good
+            const inputWords = inputLower.split(/\s+/).filter(w => w.length > 2);
+            const matchesKeywords = inputWords.some(word => 
+                placeNameLower.includes(word) || resultTextLower.includes(word)
+            );
+            
+            // If it's just a city/region and doesn't match keywords, ask user
+            const isGeneric = firstResult.place_type && 
+                (firstResult.place_type.includes('place') || 
+                 firstResult.place_type.includes('region') ||
+                 firstResult.place_type.includes('country'));
+            
+            if (isGeneric && !matchesKeywords) {
+                const proceed = confirm(
+                    `⚠️ Couldn't find exact location "${rawInput}".\n\n` +
+                    `Found: "${firstResult.place_name || firstResult.text}".\n\n` +
+                    `Fly there anyway?`
+                );
+                if (!proceed) return;
             }
+            
+            validMatch = firstResult;
         }
 
         if (validMatch) {
-            console.log(`🎯 Locked on: ${validMatch.place_name}`);
-            executeFlyTo(validMatch.center[0], validMatch.center[1]);
+            const center = validMatch.center; // [lon, lat]
+            console.log("📍 Found:", validMatch.place_name || validMatch.text, "at", center);
+            executeDirectFly(center[1], center[0]);
         }
 
     } catch(e) {
-        console.error("Search Error:", e);
-        alert("Search system offline. Check console.");
+        console.error("Geocoding Error:", e);
+        alert("Search failed. Check console for details.");
     }
 }
+
 
 // --- HELPER: EXECUTE THE FLIGHT & SCAN ---
 function executeFlyTo(lon, lat) {
@@ -407,9 +427,59 @@ async function fetchRegulations(lat, lon) {
 function renderLiveRegulations(data) {
     const container = document.getElementById('reg-content');
     if(!data.success && !data.summary) { container.innerHTML = "AI Error."; return; }
-    let html = `<div class="reg-summary">📍 <b>${data.location}</b><br>${data.summary}</div>`;
-    data.approvals.forEach(app => html += `<div class="reg-card"><div class="reg-title">${app.approval_name}</div><div class="reg-desc">${app.explanation}</div></div>`);
-    if(data.additional_costs) data.additional_costs.forEach(c => html += `<div class="cost-row"><span>${c.cost_name}</span><span class="cost-val">${c.price} ${c.currency}</span></div>`);
+    
+    let html = '';
+    
+    // Location Summary Section
+    html += `<div class="section-header">Location Overview</div>`;
+    html += `<div class="reg-summary"><b>${data.location || 'Unknown Location'}</b><br>${data.summary || 'No summary available.'}</div>`;
+    
+    // Approvals Section
+    if(data.approvals && data.approvals.length > 0) {
+        html += `<div class="section-header">Required Approvals</div>`;
+        data.approvals.forEach(app => {
+            html += `<div class="reg-card">
+                <div class="reg-title">
+                    <span>${app.approval_name}</span>
+                </div>
+                <div class="reg-desc">${app.explanation || 'No explanation provided.'}</div>
+            </div>`;
+        });
+    }
+    
+    // Instructions Section
+    if(data.instructions) {
+        html += `<div class="section-header">Compliance Instructions</div>`;
+        html += `<div class="reg-instructions">${data.instructions}</div>`;
+    }
+    
+    // Additional Costs Section
+    if(data.additional_costs && data.additional_costs.length > 0) {
+        html += `<div class="section-header">Additional Costs</div>`;
+        html += `<div class="costs-container">`;
+        data.additional_costs.forEach(c => {
+            html += `<div class="cost-item">
+                <div class="cost-name">${c.cost_name || 'Fee'}</div>
+                <div class="cost-price">~${c.price !== undefined ? c.price : 0} ${c.currency || 'USD'}</div>
+                ${c.description ? `<div class="cost-desc">${c.description}</div>` : ''}
+            </div>`;
+        });
+        html += `</div>`;
+    }
+    
+    // Links Section
+    if(data.links && data.links.length > 0) {
+        html += `<div class="section-header">Official Resources</div>`;
+        html += `<div class="links-container">`;
+        data.links.forEach(link => {
+            html += `<a href="${link.link || '#'}" target="_blank" rel="noopener noreferrer" class="reg-link">
+                <span class="link-icon">🔗</span>
+                <span class="link-name">${link.name || 'Official Link'}</span>
+            </a>`;
+        });
+        html += `</div>`;
+    }
+    
     container.innerHTML = html;
 }
 

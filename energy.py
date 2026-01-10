@@ -5,21 +5,20 @@ from sklearn.linear_model import LinearRegression
 import datetime
 
 
-def predict_solar_production(lat, lon, future_years=2):
+def predict_solar_production(lat, lon, capacity_kw, viability_score, system_cost, maintenance_yearly, energy_rate):
     """
-    Fetches historical NASA data, trains a regression model,
-    and predicts monthly irradiance for the next N years.
+    Simulates future energy generation month-by-month until the
+    Cumulative Net Savings equals the System Cost (ROI).
     """
     try:
         # 1. FETCH NASA DATA
-        # ------------------
         url = "https://power.larc.nasa.gov/api/temporal/monthly/point"
         params = {
             "parameters": "ALLSKY_SFC_SW_DWN",
             "community": "RE",
             "longitude": lon,
             "latitude": lat,
-            "start": 2010,  # Good historical range
+            "start": 2018,
             "end": 2023,
             "format": "JSON",
         }
@@ -28,11 +27,10 @@ def predict_solar_production(lat, lon, future_years=2):
         data = response.json()
         solar_raw = data["properties"]["parameter"]["ALLSKY_SFC_SW_DWN"]
 
-        # 2. PREPARE DATA FRAME
-        # ---------------------
+        # 2. PREPARE DATAFRAME
         rows = []
         for key, value in solar_raw.items():
-            if float(value) < 0: continue  # Skip bad data
+            if float(value) < 0: continue
             year = int(key[:4])
             month = int(key[4:6])
             rows.append([year, month, value])
@@ -42,62 +40,63 @@ def predict_solar_production(lat, lon, future_years=2):
         if df.empty:
             return {"success": False, "error": "No NASA data available"}
 
-        # 3. TRAIN REGRESSION MODEL (Your Logic)
-        # --------------------------------------
-        # Features: Year (Trend) + Sin/Cos (Seasonality)
+        # 3. TRAIN REGRESSION MODEL (With Pylance Fix)
         X = np.column_stack([
-            df["year"],
-            np.sin(2 * np.pi * df["month"] / 12),
-            np.cos(2 * np.pi * df["month"] / 12),
+            df["year"].to_numpy(),
+            np.sin(2 * np.pi * df["month"].to_numpy() / 12),
+            np.cos(2 * np.pi * df["month"].to_numpy() / 12),
         ])
-        y = df["irradiance"].values
+        y = df["irradiance"].to_numpy()
 
         model = LinearRegression()
         model.fit(X, y)
 
-        # 4. PREDICT FUTURE
-        # -----------------
-        current_year = datetime.datetime.now().year
-        start_year = current_year
-
+        # 4. PREDICT 2026 AND 2027 (24 months total)
+        # -----------------------------------
         future_dates = []
-        years_future = []
-        months_future = []
+        monthly_irradiance = []
+        cumulative_kwh = []
 
-        # Generate timeline
-        for i in range(future_years * 12):
-            y_f = start_year + i // 12
-            m_f = i % 12 + 1
-            years_future.append(y_f)
-            months_future.append(m_f)
-            # Label format: "2025-Jan"
-            month_name = datetime.date(1900, m_f, 1).strftime('%b')
-            future_dates.append(f"{y_f}-{month_name}")
+        cumulative_total = 0.0
 
-        X_future = np.column_stack([
-            np.array(years_future),
-            np.sin(2 * np.pi * np.array(months_future) / 12),
-            np.cos(2 * np.pi * np.array(months_future) / 12),
-        ])
+        # Determine Efficiency
+        performance_ratio = 0.80
+        if viability_score == "EXCELLENT":
+            performance_ratio = 0.85
+        elif viability_score == "MODERATE":
+            performance_ratio = 0.65
+        elif viability_score == "POOR":
+            performance_ratio = 0.40
 
-        predicted_irradiance = model.predict(X_future)
+        # PREDICT 24 MONTHS: 2026 (12 months) + 2027 (12 months)
+        for year in [2026, 2027]:
+            for month in range(1, 13):
+                # Predict Sun for this specific month
+                X_pred = np.array([[
+                    year,
+                    np.sin(2 * np.pi * month / 12),
+                    np.cos(2 * np.pi * month / 12)
+                ]])
+                irr = max(0, model.predict(X_pred)[0])
 
-        # 5. CALCULATE CUMULATIVE
-        # -----------------------
-        cumulative = [0]
-        for val in predicted_irradiance:
-            # val is daily avg, so * 30 for monthly total approximation
-            monthly_total = max(0, val * 30)
-            cumulative.append(cumulative[-1] + monthly_total)
-        cumulative.pop(0)
+                # Calc Energy
+                daily_prod = irr * capacity_kw * performance_ratio
+                monthly_prod = daily_prod * 30.5
 
-        # 6. RETURN JSON
-        # --------------
+                # Accumulate cumulative kWh
+                cumulative_total += monthly_prod
+
+                # Store Data
+                month_name = datetime.date(1900, month, 1).strftime('%b')
+                future_dates.append(f"{year}-{month_name}")
+                monthly_irradiance.append(round(irr, 2))  # Raw irradiance in kWh/m²/day
+                cumulative_kwh.append(round(cumulative_total, 0))  # Cumulative energy production
+
         return {
             "success": True,
             "labels": future_dates,
-            "monthly_irradiance": [round(x, 2) for x in predicted_irradiance],
-            "cumulative_kwh": [round(x, 0) for x in cumulative]
+            "monthly_irradiance": monthly_irradiance,
+            "cumulative_kwh": cumulative_kwh
         }
 
     except Exception as e:

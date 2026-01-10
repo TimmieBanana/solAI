@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>SolarPro Enterprise | Site Analysis</title>
+    <title>SolAI Enterprise | Site Analysis</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
@@ -18,7 +18,7 @@
 
     <div class="hud">
         <div class="header">
-            <h1>SolarPro Enterprise</h1>
+            <h1>SolAI Engine</h1>
             <span class="status">SYSTEM READY :: 3D ENGINE ACTIVE</span>
         </div>
 
@@ -28,9 +28,17 @@
         </div>
 
         <div class="input-group">
-            <select id="installType" onchange="toggleInstallType()">
+            <select id="installType" onchange="recalculate()">
                 <option value="roof">MOUNT: ROOFTOP (AUTO-SNAP)</option>
                 <option value="ground">MOUNT: GROUND ARRAY</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <select id="panelType" onchange="updatePanelSelection()">
+                <option value="commercial">Panel: Commercial Poly (16%) - 650 AED</option>
+                <option value="premium" selected>Panel: Premium Mono (20%) - 900 AED</option>
+                <option value="advanced">Panel: Advanced N-Type (23%) - 1,200 AED</option>
             </select>
         </div>
 
@@ -54,6 +62,11 @@
                 <div class="cell"><span class="val" id="val_panels">0</span><span class="label">MAX PANELS</span></div>
                 <div class="cell"><span class="val" id="val_capacity">0</span><span class="label">CAPACITY (kW)</span></div>
                 <div class="cell"><span class="val" id="val_daily">0</span><span class="label">DAILY (kWh)</span></div>
+                
+                <div class="cell full-width" style="margin-top: 5px; border-color: rgba(0, 255, 170, 0.3);">
+                    <span class="val" id="val_co2" style="color: #00ffaa;">0 Tonnes</span>
+                    <span class="label">EST. YEARLY CO₂ OFFSET</span>
+                </div>
             </div>
         </div>
 
@@ -82,11 +95,31 @@
 
         <div id="tab-financial" class="tab-content">
             <div class="grid">
-                <div class="cell"><span class="val highlight" id="val_cost">$0</span><span class="label">EST. COST</span></div>
-                <div class="cell"><span class="val highlight" id="val_savings">$0</span><span class="label">YR SAVINGS</span></div>
+                <div class="cell">
+                    <span class="val" id="fin_panels">AED 0</span>
+                    <span class="label">HARDWARE (PANELS)</span>
+                </div>
+                <div class="cell">
+                    <span class="val" id="fin_labour">AED 0</span>
+                    <span class="label">LABOUR & INSTALL</span>
+                </div>
+
+                <div class="cell">
+                    <span class="val" id="fin_legal" style="color: #f59e0b;">AED 0</span>
+                    <span class="label">LEGAL & PERMITS</span>
+                </div>
+                <div class="cell">
+                    <span class="val" id="fin_maint">AED 0/yr</span>
+                    <span class="label">ROUTINE MAINTENANCE</span>
+                </div>
+
+                <div class="cell full-width" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 5px;">
+                    <span class="val highlight" id="fin_total">AED 0</span>
+                    <span class="label">TOTAL ESTIMATED PROJECT COST</span>
+                </div>
                 <div class="cell full-width">
-                    <span class="val" id="val_breakeven">0 Years</span>
-                    <span class="label">ROI PERIOD</span>
+                    <span class="val" id="fin_roi" style="color: #00ffaa;">-- Years</span>
+                    <span class="label">ROI (BREAK-EVEN PERIOD)</span>
                 </div>
             </div>
         </div>
@@ -100,8 +133,10 @@
         </div>
 
         <div id="tab-graph" class="tab-content">
-            <div class="chart-container">
-                <canvas id="energyChart"></canvas>
+            <div class="chart-wrapper" style="overflow-x: auto; width: 100%; height: 320px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+                <div class="chart-body" style="height: 100%; width: 100%;">
+                    <canvas id="energyChart"></canvas>
+                </div>
             </div>
         </div>
 
