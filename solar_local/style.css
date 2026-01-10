@@ -70,4 +70,42 @@ button:hover { background: var(--neon); color: black; box-shadow: 0 0 15px var(-
 .config-row input { width: 60px; text-align: right; padding: 4px; }
 
 /* CHART */
+
 .chart-container { height: 180px; width: 100%; }
+
+.reg-container {
+    height: 300px;
+    overflow-y: auto; /* Scrollable if text is long */
+    padding-right: 5px;
+}
+
+/* Custom Scrollbar */
+.reg-container::-webkit-scrollbar { width: 4px; }
+.reg-container::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+.reg-summary {
+    font-size: 11px; color: #ccc; margin-bottom: 15px; border-left: 2px solid var(--neon); padding-left: 8px; line-height: 1.4;
+}
+
+.reg-card {
+    background: rgba(255,255,255,0.03); 
+    border: 1px solid rgba(255,255,255,0.05); 
+    padding: 8px; margin-bottom: 8px; border-radius: 4px;
+}
+
+.reg-title { font-size: 11px; font-weight: bold; color: var(--neon); display: flex; justify-content: space-between; }
+.reg-req { font-size: 9px; background: rgba(0, 255, 204, 0.2); padding: 2px 4px; border-radius: 2px; color: #fff; }
+
+.reg-desc { font-size: 10px; color: #888; margin-top: 4px; line-height: 1.2; }
+
+.cost-row { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px dashed #333; }
+.cost-row:last-child { border-bottom: none; }
+.cost-val { color: var(--neon); font-weight: bold; }
+
+.reg-link {
+    display: block; text-align: center; font-size: 10px; color: #fff; background: #222; 
+    padding: 6px; margin-top: 5px; text-decoration: none; border: 1px solid #333;
+}
+.reg-link:hover { border-color: var(--neon); color: var(--neon); }
+
+.section-header { font-size: 10px; color: #666; text-transform: uppercase; margin: 15px 0 5px 0; font-weight: bold; }
