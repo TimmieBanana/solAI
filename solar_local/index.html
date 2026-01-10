@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>SolarPro | Architectural Engine</title>
+    <title>SolarPro Enterprise | Site Analysis</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
+
     <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,72 +18,83 @@
 
     <div class="hud">
         <div class="header">
-            <h1>SolarPro // OS</h1>
+            <h1>SolarPro Enterprise</h1>
             <span class="status">SYSTEM READY :: 3D ENGINE ACTIVE</span>
         </div>
 
         <div class="input-group">
-            <input type="text" id="locInput" value="Dubai Marina" placeholder="ENTER CITY OR COORDS...">
-            <button onclick="flyToLocation()">FLY</button>
+            <input type="text" id="locInput" value="Burj Khalifa" placeholder="ENTER SITE ADDRESS...">
+            <button onclick="flyToLocation()">SCAN</button>
         </div>
 
         <div class="input-group">
             <select id="installType" onchange="toggleInstallType()">
-                <option value="roof">MOUNT: ROOFTOP (SNAP ON)</option>
-                <option value="ground">MOUNT: GROUND / CARPORT</option>
+                <option value="roof">MOUNT: ROOFTOP (AUTO-SNAP)</option>
+                <option value="ground">MOUNT: GROUND ARRAY</option>
             </select>
         </div>
 
-        <button class="action-btn" id="drawBtn" onclick="toggleDraw()">[ + ] INITIALIZE SCANNER</button>
-        
-        <button class="action-btn" id="scoutBtn" onclick="toggleScoutMode()" style="border-color: #ff9900; color: #ff9900; margin-top: -10px;">
-            📡 ACTIVATE SOLAR SCOUT
+        <button class="action-btn" id="drawBtn" onclick="toggleDraw()">[ + ] MANUAL DRAW MODE</button>
+
+        <button class="action-btn" id="scoutBtn" onclick="toggleScoutMode()" style="border-color: #f59e0b; color: #f59e0b; margin-top: -10px;">
+            📡 ACTIVATE THERMAL SCOUT
         </button>
 
         <div class="tab-header">
-            <button class="tab-link active" onclick="openTab(event, 'tab-overview')">DATA</button>
-            <button class="tab-link" onclick="openTab(event, 'tab-financial')">FINANCE</button>
-            <button class="tab-link" onclick="openTab(event, 'tab-regulations')">AI LAWS</button>
-            <button class="tab-link" onclick="openTab(event, 'tab-graph')">GRAPH</button>
-            <button class="tab-link" onclick="openTab(event, 'tab-config')">INPUTS</button>
-        </div>
-
-        <div class="cube-wrapper">
-            <div class="cube">
-                <div class="face top" onclick="snapView('top')">TOP</div>
-                <div class="face front" onclick="snapView('front')">S</div>
-                <div class="face back" onclick="snapView('back')">N</div>
-                <div class="face right" onclick="snapView('right')">E</div>
-                <div class="face left" onclick="snapView('left')">W</div>
-                <div class="face bottom"></div>
-            </div>
-            <div class="cube-label">VIEW</div>
+            <button class="tab-link active" id="btn-data" onclick="openTab(event, 'tab-overview')">DATA</button>
+            <button class="tab-link" id="btn-viability" onclick="openTab(event, 'tab-viability')">VIABILITY</button>
+            <button class="tab-link" id="btn-finance" onclick="openTab(event, 'tab-financial')">FINANCE</button>
+            <button class="tab-link" id="btn-laws" onclick="openTab(event, 'tab-regulations')">REGULATIONS</button>
+            <button class="tab-link" id="btn-graph" onclick="openTab(event, 'tab-graph')">GRAPH</button>
         </div>
 
         <div id="tab-overview" class="tab-content active">
             <div class="grid">
-                <div class="cell"><span class="val" id="val_area">0</span><span class="label">AREA (m²)</span></div>
-                <div class="cell"><span class="val" id="val_panels">0</span><span class="label">PANEL COUNT</span></div>
+                <div class="cell"><span class="val" id="val_area">0</span><span class="label">ROOF AREA (m²)</span></div>
+                <div class="cell"><span class="val" id="val_panels">0</span><span class="label">MAX PANELS</span></div>
                 <div class="cell"><span class="val" id="val_capacity">0</span><span class="label">CAPACITY (kW)</span></div>
                 <div class="cell"><span class="val" id="val_daily">0</span><span class="label">DAILY (kWh)</span></div>
             </div>
         </div>
 
+        <div id="tab-viability" class="tab-content">
+            <div class="grid">
+                <div class="cell full-width" style="text-align: center; border-color: rgba(255,255,255,0.1);">
+                    <span class="val" id="via_score" style="font-size: 24px; letter-spacing: 1px;">--</span>
+                    <span class="label">SOLAR VIABILITY SCORE</span>
+                </div>
+                <div class="cell">
+                    <span class="val" id="via_roof">0</span>
+                    <span class="label">TOTAL ROOF (m²)</span>
+                </div>
+                <div class="cell">
+                    <span class="val" id="via_usable">0</span>
+                    <span class="label">USABLE SPACE (m²)</span>
+                </div>
+            </div>
+            <div class="section-header">WINTER SHADOW ANALYSIS</div>
+            <div class="reg-card">
+                <div class="reg-desc" id="via_impact" style="font-size: 12px; color: #cbd5e1;">
+                    Run a scan to analyze shadows.
+                </div>
+            </div>
+        </div>
+
         <div id="tab-financial" class="tab-content">
             <div class="grid">
-                <div class="cell"><span class="val highlight" id="val_cost">$0</span><span class="label">TOTAL COST</span></div>
-                <div class="cell"><span class="val highlight" id="val_savings">$0</span><span class="label">YEARLY SAVINGS</span></div>
+                <div class="cell"><span class="val highlight" id="val_cost">$0</span><span class="label">EST. COST</span></div>
+                <div class="cell"><span class="val highlight" id="val_savings">$0</span><span class="label">YR SAVINGS</span></div>
                 <div class="cell full-width">
                     <span class="val" id="val_breakeven">0 Years</span>
-                    <span class="label">BREAK-EVEN PERIOD</span>
+                    <span class="label">ROI PERIOD</span>
                 </div>
             </div>
         </div>
 
         <div id="tab-regulations" class="tab-content">
             <div id="reg-content" class="reg-container">
-                <div style="font-size: 10px; color: #666; padding: 10px;">
-                    Scan an area to fetch AI regulations.
+                <div style="font-size: 11px; color: #666; padding: 10px;">
+                    Scan a site to fetch local zoning laws.
                 </div>
             </div>
         </div>
@@ -94,25 +105,20 @@
             </div>
         </div>
 
-        <div id="tab-config" class="tab-content">
-            <div class="config-row">
-                <label>Electricity Cost ($/kWh)</label>
-                <input type="number" id="cfg_elec_price" value="0.14" step="0.01" onchange="recalculate()">
-            </div>
-            <div class="config-row">
-                <label>Install Cost ($/kW)</label>
-                <input type="number" id="cfg_install_cost" value="1000" step="50" onchange="recalculate()">
-            </div>
-            <div class="config-row">
-                <label>Panel Wattage (W)</label>
-                <input type="number" id="cfg_panel_watts" value="400" step="10" onchange="recalculate()">
-            </div>
-        </div>
-
         <button class="reset-btn" onclick="resetView()">RESET SYSTEM</button>
     </div>
 
-    <script src="app.js"></script>
+    <div class="cube-wrapper">
+        <div class="cube">
+            <div class="face top" onclick="snapView('top')">TOP</div>
+            <div class="face front" onclick="snapView('front')">S</div>
+            <div class="face back" onclick="snapView('back')">N</div>
+            <div class="face right" onclick="snapView('right')">E</div>
+            <div class="face left" onclick="snapView('left')">W</div>
+            <div class="face bottom"></div>
+        </div>
+    </div>
 
+    <script src="app.js"></script>
 </body>
 </html>
