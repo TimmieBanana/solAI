@@ -1,5 +1,5 @@
 // --- 1. CONFIGURATION ---
-const API_KEY = 'k8DnL4rHFRSvHVOjdsle'; // <--- PASTE KEY HERE
+const API_KEY = 'KEY FOR MAPP'; // <--- PASTE KEY HERE
 
 // --- 2. GLOBAL STATE ---
 let map;
@@ -218,3 +218,4 @@ function resetView() {
 // Start App
 
 initMap();
+
