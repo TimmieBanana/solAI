@@ -40,6 +40,14 @@ button {
 }
 button:hover { background: var(--neon); color: black; box-shadow: 0 0 15px var(--neon); }
 
+/* DROPDOWN STYLING */
+select {
+    background: rgba(0,0,0,0.4); border: 1px solid #444; color: var(--neon);
+    padding: 8px; flex: 1; font-family: inherit; font-size: 12px; outline: none;
+    text-transform: uppercase; cursor: pointer; width: 100%; margin-bottom: 10px;
+}
+option { background: #000; color: white; }
+
 .action-btn { width: 100%; padding: 12px; font-size: 14px; margin-bottom: 15px; }
 .action-btn.active { background: var(--neon-accent); border-color: var(--neon-accent); color: white; }
 .reset-btn { width: 100%; margin-top: 15px; border-color: #444; color: #888; background: transparent; }
@@ -70,9 +78,9 @@ button:hover { background: var(--neon); color: black; box-shadow: 0 0 15px var(-
 .config-row input { width: 60px; text-align: right; padding: 4px; }
 
 /* CHART */
-
 .chart-container { height: 180px; width: 100%; }
 
+/* REGULATIONS TAB */
 .reg-container {
     height: 300px;
     overflow-y: auto; /* Scrollable if text is long */
@@ -88,8 +96,8 @@ button:hover { background: var(--neon); color: black; box-shadow: 0 0 15px var(-
 }
 
 .reg-card {
-    background: rgba(255,255,255,0.03); 
-    border: 1px solid rgba(255,255,255,0.05); 
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
     padding: 8px; margin-bottom: 8px; border-radius: 4px;
 }
 
@@ -103,9 +111,46 @@ button:hover { background: var(--neon); color: black; box-shadow: 0 0 15px var(-
 .cost-val { color: var(--neon); font-weight: bold; }
 
 .reg-link {
-    display: block; text-align: center; font-size: 10px; color: #fff; background: #222; 
+    display: block; text-align: center; font-size: 10px; color: #fff; background: #222;
     padding: 6px; margin-top: 5px; text-decoration: none; border: 1px solid #333;
 }
 .reg-link:hover { border-color: var(--neon); color: var(--neon); }
 
 .section-header { font-size: 10px; color: #666; text-transform: uppercase; margin: 15px 0 5px 0; font-weight: bold; }
+
+/* --- 3D VIEW CUBE (UPDATED: BOTTOM RIGHT & LIVE) --- */
+.cube-wrapper {
+    position: absolute;
+    bottom: 40px; /* Moved to Bottom */
+    right: 20px;
+    width: 50px; height: 50px;
+    perspective: 400px; z-index: 100; cursor: pointer;
+}
+
+.cube {
+    width: 100%; height: 100%; position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.1s linear; /* Smooth sync with map */
+}
+
+/* Make faces slightly transparent */
+.face {
+    position: absolute; width: 50px; height: 50px;
+    background: rgba(0,0,0,0.6); border: 1px solid var(--neon);
+    color: var(--neon); font-size: 10px; font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 5px rgba(0, 255, 204, 0.1);
+    user-select: none;
+}
+
+.face:hover { background: var(--neon); color: black; box-shadow: 0 0 20px var(--neon); }
+
+/* Cube Geometry Math (Adjusted for 50px) */
+.face.front  { transform: rotateY(0deg) translateZ(25px); }
+.face.back   { transform: rotateY(180deg) translateZ(25px); }
+.face.right  { transform: rotateY(90deg) translateZ(25px); }
+.face.left   { transform: rotateY(-90deg) translateZ(25px); }
+.face.top    { transform: rotateX(90deg) translateZ(25px); }
+.face.bottom { transform: rotateX(-90deg) translateZ(25px); border-color: #333; }
+
+.cube-label { display: none; }

@@ -23,17 +23,41 @@
         </div>
 
         <div class="input-group">
-            <input type="text" id="locInput" value="Dubai Marina" placeholder="ENTER CITY...">
-            <button onclick="flyToLocation()">FLY TO TARGET</button>
+            <input type="text" id="locInput" value="Dubai Marina" placeholder="ENTER CITY OR COORDS...">
+            <button onclick="flyToLocation()">FLY</button>
+        </div>
+
+        <div class="input-group">
+            <select id="installType" onchange="toggleInstallType()">
+                <option value="roof">MOUNT: ROOFTOP (SNAP ON)</option>
+                <option value="ground">MOUNT: GROUND / CARPORT</option>
+            </select>
         </div>
 
         <button class="action-btn" id="drawBtn" onclick="toggleDraw()">[ + ] INITIALIZE SCANNER</button>
+        
+        <button class="action-btn" id="scoutBtn" onclick="toggleScoutMode()" style="border-color: #ff9900; color: #ff9900; margin-top: -10px;">
+            📡 ACTIVATE SOLAR SCOUT
+        </button>
 
         <div class="tab-header">
             <button class="tab-link active" onclick="openTab(event, 'tab-overview')">DATA</button>
             <button class="tab-link" onclick="openTab(event, 'tab-financial')">FINANCE</button>
-            <button class="tab-link" onclick="openTab(event, 'tab-regulations')">AI REGULATIONS</button> <button class="tab-link" onclick="openTab(event, 'tab-graph')">PROJECTION</button>
+            <button class="tab-link" onclick="openTab(event, 'tab-regulations')">AI LAWS</button>
+            <button class="tab-link" onclick="openTab(event, 'tab-graph')">GRAPH</button>
             <button class="tab-link" onclick="openTab(event, 'tab-config')">INPUTS</button>
+        </div>
+
+        <div class="cube-wrapper">
+            <div class="cube">
+                <div class="face top" onclick="snapView('top')">TOP</div>
+                <div class="face front" onclick="snapView('front')">S</div>
+                <div class="face back" onclick="snapView('back')">N</div>
+                <div class="face right" onclick="snapView('right')">E</div>
+                <div class="face left" onclick="snapView('left')">W</div>
+                <div class="face bottom"></div>
+            </div>
+            <div class="cube-label">VIEW</div>
         </div>
 
         <div id="tab-overview" class="tab-content active">
@@ -58,7 +82,10 @@
 
         <div id="tab-regulations" class="tab-content">
             <div id="reg-content" class="reg-container">
+                <div style="font-size: 10px; color: #666; padding: 10px;">
+                    Scan an area to fetch AI regulations.
                 </div>
+            </div>
         </div>
 
         <div id="tab-graph" class="tab-content">
