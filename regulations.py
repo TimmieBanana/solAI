@@ -1,144 +1,93 @@
 from google import genai
-
 import time
 import json
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# --- CONFIGURATION ---
+# We hardcode it here to prevent the "Missing key" error
+API_KEY = "AIzaSyAi90hk4pdzcAoNZt6smXuzQ4ksHJ1G01Q"
 
 SYSTEM_PROMPT = """
-You are an AI that provides solar panel installation regulations for a given location based on latitude and longitude.
+You are a Geo-Regulatory Solar AI. Your ONLY goal is to provide local regulations based on specific coordinates.
 
-Your task is to return the information in exactly the dict format below, with the same structure, keys, and section types. Use short and clear summaries, instructions, and explanations similar in length and style to the example.
+INPUT COORDINATES: Latitude {lat}, Longitude {lon}
 
-Rules:
+TASK:
+1. IDENTIFY THE LOCATION: Determine the exact City, Region, and Country for these coordinates.
+2. RETRIEVE LOCAL LAWS: specific to THAT identified city/country.
+3. FORMAT OUTPUT: Return a strict JSON dictionary.
 
-1. Location & Summary
-   - Use the exact location of the coordinates: latitude = {lat}, longitude = {lon}
-   - Include a one-sentence summary in 'summary' describing whether regulations apply.
+CRITICAL RULES:
+- IF the coordinates are in India (e.g., Taj Mahal), give regulations for INDIA (MNRE, State Discoms).
+- IF the coordinates are in the US, give regulations for that State/County (NEC, HOA rules).
+- IF the coordinates are in Dubai, give regulations for DEWA/Shams Dubai.
+- DO NOT default to Dubai unless the coordinates are actually in Dubai.
 
-2. Approvals ('approvals')
-   - Always include these three approvals: Planning Approval, Grid Connection Approval, Special Permits.
-   - Each approval is a dict with:
-     - 'approval_name': name of the approval
-     - 'required': True or False
-     - 'explanation': 1 sentence explaining why it is required or not
-   - Add any other relevant approvals if needed for this location.
-
-3. Restrictions ('restrictions')
-   - Single short paragraph summarizing all important restrictions for panels in this area (height limits, visibility, roof types, etc.)
-   - Make it concise and easy to read.
-
-4. Instructions ('instructions')
-   - Single paragraph telling the user how to comply with the regulations.
-
-5. Additional Costs ('additional_costs')
-   - List of dicts. Each dict has:
-     - 'cost_name'
-     - 'price'
-     - 'currency'
-     - 'description'
-   - Include only costs directly incurred from regulations, e.g., application fees, mandatory inspections, hiring certified personnel.
-   - Do NOT include panel purchase or basic installation costs.
-
-6. References / Links ('links')
-   - Always include at least these two if available:
-     1. "Official Regulation Page"
-     2. "Guidelines PDF"
-   - Include any additional links only if necessary for understanding.
-   - Each link is a dict: 'name' and 'link'.
-
-7. AI Reasoning ('ai_reasoning')
-   - Optional paragraph explaining the regulations in a human-readable way. Keep it concise.
-
-Output Format (exactly):
-
+OUTPUT FORMAT (JSON ONLY):
 {{
-    "location": "<city or area>",
-    "summary": "<one-sentence summary>",
-
+    "location": "<Detected City, Country>",
+    "summary": "<Specific summary for this location>",
     "approvals": [
-        {{
-            "approval_name": "Planning Approval",
-            "required": <True/False>,
-            "explanation": "<one-sentence explanation>"
-        }},
-        {{
-            "approval_name": "Grid Connection Approval",
-            "required": <True/False>,
-            "explanation": "<one-sentence explanation>"
-        }},
-        {{
-            "approval_name": "Special Permits",
-            "required": <True/False>,
-            "explanation": "<one-sentence explanation>"
-        }}
-        # Add other approvals here if needed
+        {{ "approval_name": "<Local Permit Name>", "required": true, "explanation": "<Why it is needed>" }},
+        {{ "approval_name": "<Grid Interconnection Name>", "required": true, "explanation": "<Utility requirement>" }}
     ],
-
-    "restrictions": "<short paragraph summarizing restrictions>",
-
-    "instructions": "<short paragraph telling how to obey regulations>",
-
+    "restrictions": "<Specific restrictions (e.g. Heritage zones)>",
+    "instructions": "<Step-by-step compliance>",
     "additional_costs": [
-        {{
-            "cost_name": "<name of cost>",
-            "price": <number>,
-            "currency": "<currency>",
-            "description": "<short description>"
-        }}
-        # Add more as needed
+        {{ "cost_name": "<Fee Name>", "price": 0, "currency": "<Local Currency>", "description": "..." }}
     ],
-
     "links": [
-        {{"name": "Official Regulation Page", "link": "<URL>"}},
-        {{"name": "Guidelines PDF", "link": "<URL>"}}
-        # Add more only if needed
+        {{ "name": "<Authority Website>", "link": "..." }}
     ],
-
-    "ai_reasoning": "<optional paragraph explaining the rules>"
+    "ai_reasoning": "Detected location as <City>. Applied regulations from <Authority>."
 }}
-
-Important:
-- All sections must be present.
-- Keep all text concise, like in the example.
-- Use the location coordinates precisely to determine the rules.
-- Return only the dict in this format, no extra commentary.
-
 """
 
+
 class RegulationsFinder:
-    client = genai.Client(api_key=os.getenv("GENAI_KEY"))
+    def __init__(self):
+        # Initialize Client with the hardcoded key
+        self.client = genai.Client(api_key=API_KEY)
 
-    def build_prompt(self, lat, lon):
+    def find_regulations(self, lat: float, lon: float, attempts: int = 3):
+        print(f"🔎 AI Analyzing Coordinates: {lat}, {lon}...")
+
+        # 1. Prepare Prompt (Inject Coordinates)
         prompt = SYSTEM_PROMPT.format(lat=lat, lon=lon)
-        return prompt
 
-    def find_regulations(self, lat: float, lon: float, attempts: int = 5):
-        prompt = self.build_prompt(lat, lon)
         for attempt in range(attempts):
             try:
+                # 2. Call Gemini API
+                # Using standard Flash model
                 response = self.client.models.generate_content(
                     model="gemini-2.5-flash",
-                    contents=prompt,
+                    contents=prompt
                 )
-                ai_output = response.text
-                if ai_output.startswith("```json"):
-                    ai_output = ai_output.removeprefix("```json").removesuffix(
-                        "```"
-                    )  # Cleans output
 
-                json_response = dict(json.loads(ai_output))
-                json_response["sucsess"] = True
+                ai_output = response.text
+
+                # 3. Clean Markdown (Remove ```json ... ```)
+                if "```json" in ai_output:
+                    ai_output = ai_output.split("```json")[1].split("```")[0]
+                elif "```" in ai_output:
+                    ai_output = ai_output.split("```")[1].split("```")[0]
+
+                # 4. Parse JSON
+                json_response = json.loads(ai_output.strip())
+                json_response["success"] = True
+
+                print(f"✅ Regulations Found for {json_response.get('location', 'Unknown')}")
                 return json_response
 
-            except genai.errors.ServerError:
-                print(f"Server busy, retrying in 5s... ({attempt+1}/{attempts})")
-                time.sleep(5)
+            except Exception as e:
+                print(f"⚠️ AI Error (Attempt {attempt + 1}): {e}")
+                time.sleep(2)
 
-        return {"sucsess": False} # If fails more than attempt times
-
-regulations_finder = RegulationsFinder()
-regulations = regulations_finder.find_regulations(55.3781, 55.38)
-print(regulations)
+        # Fallback if AI fails
+        return {
+            "success": False,
+            "summary": "AI Regulation Scan Failed. Please try again.",
+            "location": "Unknown",
+            "approvals": [],
+            "additional_costs": []
+        }

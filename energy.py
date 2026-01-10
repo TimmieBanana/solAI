@@ -1,88 +1,104 @@
 import requests
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+import datetime
 
 
-def nasa_kwh_data(lon, lat, year=2023):
-    """Returns a dict with keys 1-12 of the monthly average of kWh/m²/day (irradiance).
-    There is a 13th key which is the yearly average kWh/m²/day (irradiance).
-
-    Example output for dubai: {1: 3.4385, 2: 4.9452, 3: 5.6911, 4: 6.4322, 5: 6.87, 6: 6.8102, 7: 6.2285, 8: 6.2035, 9: 5.5903, 10: 4.9049, 11: 4.1035, 12: 3.7819, 13: 5.417}
+def predict_solar_production(lat, lon, future_years=2):
     """
+    Fetches historical NASA data, trains a regression model,
+    and predicts monthly irradiance for the next N years.
+    """
+    try:
+        # 1. FETCH NASA DATA
+        # ------------------
+        url = "https://power.larc.nasa.gov/api/temporal/monthly/point"
+        params = {
+            "parameters": "ALLSKY_SFC_SW_DWN",
+            "community": "RE",
+            "longitude": lon,
+            "latitude": lat,
+            "start": 2010,  # Good historical range
+            "end": 2023,
+            "format": "JSON",
+        }
 
-    url = "https://power.larc.nasa.gov/api/temporal/monthly/point"
-    params = {
-        "parameters": "ALLSKY_SFC_SW_DWN",
-        "community": "RE",
-        "longitude": lon,
-        "latitude": lat,
-        "start": year,
-        "end": year,
-        "format": "JSON",
-    }
+        response = requests.get(url, params=params)
+        data = response.json()
+        solar_raw = data["properties"]["parameter"]["ALLSKY_SFC_SW_DWN"]
 
-    response = requests.get(url, params=params)
-    data = response.json()
+        # 2. PREPARE DATA FRAME
+        # ---------------------
+        rows = []
+        for key, value in solar_raw.items():
+            if float(value) < 0: continue  # Skip bad data
+            year = int(key[:4])
+            month = int(key[4:6])
+            rows.append([year, month, value])
 
-    solar_raw: dict = data["properties"]["parameter"]["ALLSKY_SFC_SW_DWN"]
-    monthly_dict = {
-        int(k[-2:]): v for k, v in solar_raw.items()
-    }  # Removes year from keys and converts to interger
+        df = pd.DataFrame(rows, columns=["year", "month", "irradiance"])
 
-    # Ensure all 12 months exist
-    for month in range(1, 13):
-        if month not in monthly_dict:
-            monthly_dict[month] = 0.0
-            
-    return monthly_dict
+        if df.empty:
+            return {"success": False, "error": "No NASA data available"}
 
+        # 3. TRAIN REGRESSION MODEL (Your Logic)
+        # --------------------------------------
+        # Features: Year (Trend) + Sin/Cos (Seasonality)
+        X = np.column_stack([
+            df["year"],
+            np.sin(2 * np.pi * df["month"] / 12),
+            np.cos(2 * np.pi * df["month"] / 12),
+        ])
+        y = df["irradiance"].values
 
-def power_generated(panel_area: int, efficiency: float, irradiance: float, month: int):
-    """Returns the average power generated per month in kWh. Set month to 13 and irradiance to the yearly average to calculate yearly output"""
-    days_in_month = {
-        1: 31,  # January
-        2: 28,  # February
-        3: 31,  # March
-        4: 30,  # April
-        5: 31,  # May
-        6: 30,  # June
-        7: 31,  # July
-        8: 31,  # August
-        9: 30,  # September
-        10: 31,  # October
-        11: 30,  # November
-        12: 31,  # December
-        13: 365,  # Whole year
-    }
-    energy_per_day = panel_area * irradiance * efficiency
-    total_energy = energy_per_day * days_in_month[month]
-    return total_energy
+        model = LinearRegression()
+        model.fit(X, y)
 
+        # 4. PREDICT FUTURE
+        # -----------------
+        current_year = datetime.datetime.now().year
+        start_year = current_year
 
-def calculate_monthly_energy(irradiance_data: dict, efficiency: float, panel_area: float):
-    "Example output: [310, 280, 350, 400, 450, 420, 380, 390, 370, 360, 340, 320]"
-    monthly_energy = []
+        future_dates = []
+        years_future = []
+        months_future = []
 
-    for month in range(1, 13):
-        power = power_generated(panel_area, efficiency, irradiance_data[month], month)
-        monthly_energy.append(power)
+        # Generate timeline
+        for i in range(future_years * 12):
+            y_f = start_year + i // 12
+            m_f = i % 12 + 1
+            years_future.append(y_f)
+            months_future.append(m_f)
+            # Label format: "2025-Jan"
+            month_name = datetime.date(1900, m_f, 1).strftime('%b')
+            future_dates.append(f"{y_f}-{month_name}")
 
-    return monthly_energy
+        X_future = np.column_stack([
+            np.array(years_future),
+            np.sin(2 * np.pi * np.array(months_future) / 12),
+            np.cos(2 * np.pi * np.array(months_future) / 12),
+        ])
 
- 
-def calculate_energy_for_panels(
-    lat, lon, panel_efficiencies: dict[str, float], panel_area
-) -> list[int]:
-    """Gets the energy output data for 1+ different panels
-    example of input panel_efficiencies: {"Panel A": 0.21, "Panel B": 0.23(efficiency of panel) ...}
+        predicted_irradiance = model.predict(X_future)
 
-    example output: (1-12 month energy output)
-    {"Panel A": [310, 280, 350, 400, 450, 420, 380, 390, 370, 360, 340, 320],
-    "Panel B": [300, 290, 340, 410, 460, 430, 390, 400, 380, 370, 350, 330]}"""
-    irradiance_data = nasa_kwh_data(lon, lat)
+        # 5. CALCULATE CUMULATIVE
+        # -----------------------
+        cumulative = [0]
+        for val in predicted_irradiance:
+            # val is daily avg, so * 30 for monthly total approximation
+            monthly_total = max(0, val * 30)
+            cumulative.append(cumulative[-1] + monthly_total)
+        cumulative.pop(0)
 
-    panel_energy_data = {}
-    for panel_name, efficiency in panel_efficiencies.items():
-        panel_energy_data[panel_name] = calculate_monthly_energy(
-            irradiance_data, efficiency, panel_area
-        )
+        # 6. RETURN JSON
+        # --------------
+        return {
+            "success": True,
+            "labels": future_dates,
+            "monthly_irradiance": [round(x, 2) for x in predicted_irradiance],
+            "cumulative_kwh": [round(x, 0) for x in cumulative]
+        }
 
-    return panel_energy_data
+    except Exception as e:
+        return {"success": False, "error": str(e)}
