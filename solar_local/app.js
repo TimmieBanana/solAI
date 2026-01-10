@@ -1,5 +1,5 @@
 // --- 1. CONFIGURATION ---
-const API_KEY = 'PASTE_YOUR_MAPTILER_KEY_HERE'; // <--- PASTE KEY HERE
+const API_KEY = 'k8DnL4rHFRSvHVOjdsle'; // <--- PASTE KEY HERE
 
 // --- 2. GLOBAL STATE ---
 let map;
@@ -216,4 +216,5 @@ function resetView() {
 }
 
 // Start App
+
 initMap();
