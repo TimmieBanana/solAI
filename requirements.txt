@@ -1,0 +1,10 @@
+google-genai
+requests
+pandas
+numpy
+scikit-learn
+osmnx
+geopandas
+shapely
+pysolar
+pytz

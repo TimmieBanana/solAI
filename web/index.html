@@ -54,9 +54,9 @@
         <div class="tab-header">
             <button class="tab-link active" id="btn-data" onclick="openTab(event, 'tab-overview')">DATA</button>
             <button class="tab-link" id="btn-viability" onclick="openTab(event, 'tab-viability')">VIABILITY</button>
-            <button class="tab-link" id="btn-finance" onclick="openTab(event, 'tab-financial')">FINANCE</button>
             <button class="tab-link" id="btn-laws" onclick="openTab(event, 'tab-regulations')">REGULATIONS</button>
             <button class="tab-link" id="btn-graph" onclick="openTab(event, 'tab-graph')">GRAPH</button>
+            <button class="tab-link" id="btn-finance" onclick="openTab(event, 'tab-financial')">FINANCE</button>
         </div>
 
         <div id="tab-overview" class="tab-content active">
@@ -65,6 +65,10 @@
                 <div class="cell"><span class="val" id="val_panels">0</span><span class="label">MAX PANELS</span></div>
                 <div class="cell"><span class="val" id="val_capacity">0</span><span class="label">CAPACITY (kW)</span></div>
                 <div class="cell"><span class="val" id="val_daily">0</span><span class="label">DAILY (kWh)</span></div>
+                <div class="cell" style="border-color: rgba(0, 255, 170, 0.3);">
+                    <span class="val" id="val_co2" style="color: #00ffaa;">0 Tonnes</span>
+                    <span class="label">YR CO₂ OFFSET</span>
+                </div>
             </div>
         </div>
 
@@ -115,9 +119,15 @@
                     <span class="val highlight" id="fin_total">USD 0</span>
                     <span class="label">TOTAL COST</span>
                 </div>
-                <div class="cell full-width">
+
+                <div class="cell full-width" style="border-color: rgba(0, 255, 170, 0.3);">
+                    <span class="val" id="fin_savings" style="color: #00ffaa;">USD 0/yr</span>
+                    <span class="label">YEARLY SAVINGS</span>
+                </div>
+
+                <div class="cell">
                     <span class="val" id="fin_roi" style="color: #00ffaa;">-- Years</span>
-                    <span class="label">ROI (BREAK-EVEN PERIOD)</span>
+                    <span class="label">ROI (BREAK-EVEN)</span>
                 </div>
             </div>
         </div>

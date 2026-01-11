@@ -1,5 +1,7 @@
 // --- 1. CONFIGURATION ---
-const API_KEY = 'k8DnL4rHFRSvHVOjdsle'; // MapTiler Key hi
+// TODO: Replace with your MapTiler API key
+// Get your key from: https://cloud.maptiler.com/account/keys/
+const API_KEY = 'YOUR_MAPTILER_API_KEY_HERE';
 
 // --- 2. GLOBAL STATE ---
 let map;
@@ -566,10 +568,14 @@ async function runMLPrediction(lat, lon) {
             if(data.monthly_kwh && data.monthly_kwh.length > 0) {
                 const firstYear = data.monthly_kwh.slice(0, 12);
                 const yearTotal = firstYear.reduce((a, b) => a + b, 0);
+                yearlyGeneration = yearTotal; // Set global yearlyGeneration for finance calculations
                 document.getElementById('val_daily').innerText = (yearTotal / 365).toFixed(1);
                 
                 const co2 = (yearTotal * 0.42) / 1000;
                 if(document.getElementById('val_co2')) document.getElementById('val_co2').innerText = co2.toFixed(1) + " Tonnes";
+                
+                // Update finance UI with yearly generation data
+                updateFinanceUI();
             }
         }
     } catch(e) { console.error("ML Error", e); }
@@ -585,6 +591,12 @@ function renderMLChart(ctx, data) {
         console.error("Missing required chart data fields");
         return;
     }
+
+    // Show canvas and hide loading message
+    const chartCanvas = document.getElementById('energyChart');
+    const loadingEl = document.getElementById('chart-loading');
+    if(chartCanvas) chartCanvas.style.display = 'block';
+    if(loadingEl) loadingEl.style.display = 'none';
 
     energyChart = new Chart(ctx, {
         type: 'line',
@@ -754,27 +766,26 @@ function updateFinanceUI() {
     if (currentArea === 0) return;
     
     // Use earnings per kWh from regulations (in local currency)
-    const electricityRate = earningsPerKwh;
+    const electricityRate = earningsPerKwh; 
 
     // 1. Calculate Total Project Cost
     const totalCapEx = costHardware + costLabour + costLegal;
 
-    // 2. Calculate Savings (using local currency rate from regulations)
-    // Only calculate if we have yearly generation data, otherwise use 0 and show "N/A" for ROI
-    const yearlySavings = yearlyGeneration > 0 ? yearlyGeneration * electricityRate : 0;
-    const netYearlySavings = yearlyGeneration > 0 ? (yearlySavings - costMaint) : 0;
+    // 2. Calculate Savings
+    const yearlySavings = yearlyGeneration * electricityRate;
+    const netYearlySavings = yearlySavings - costMaint;
 
-    // 3. Calculate ROI (only if we have yearly generation data)
+    // 3. Calculate ROI
     let roiYears = 0;
-    if(yearlyGeneration > 0 && netYearlySavings > 0) {
+    if(netYearlySavings > 0) {
         roiYears = totalCapEx / netYearlySavings;
     }
 
-    // --- NEW: CO2 CALCULATION ---
+    // --- 4. CO2 CALCULATION ---
     // Standard Grid Factor: ~0.42 kg CO2 per kWh (Natural Gas Grid avg)
-    const co2Tonnes = yearlyGeneration > 0 ? (yearlyGeneration * 0.42) / 1000 : 0;
+    const co2Tonnes = (yearlyGeneration * 0.42) / 1000;
 
-    // 4. Update DOM Elements - Use local currency
+    // 5. Update DOM Elements
     const fmt = (n) => localCurrency + " " + Math.round(n).toLocaleString();
     
     if(document.getElementById('fin_panels')) document.getElementById('fin_panels').innerText = fmt(costHardware);
@@ -782,30 +793,26 @@ function updateFinanceUI() {
     if(document.getElementById('fin_legal')) document.getElementById('fin_legal').innerText = fmt(costLegal);
     if(document.getElementById('fin_maint')) document.getElementById('fin_maint').innerText = fmt(costMaint) + "/yr";
     if(document.getElementById('fin_total')) document.getElementById('fin_total').innerText = fmt(totalCapEx);
-    if(document.getElementById('fin_roi')) {
-        if(yearlyGeneration > 0) {
-            document.getElementById('fin_roi').innerText = roiYears > 0 ? roiYears.toFixed(1) + " Years" : "N/A";
-        } else {
-            // Don't overwrite ROI if yearly generation hasn't been calculated yet
-            // This prevents showing incorrect ROI on initial load
-        }
+    
+    // Update Yearly Savings
+    if(document.getElementById('fin_savings')) {
+        document.getElementById('fin_savings').innerText = fmt(yearlySavings) + "/yr";
     }
     
-    // Summary Tab
-    if(document.getElementById('val_cost')) document.getElementById('val_cost').innerText = fmt(totalCapEx);
-    if(document.getElementById('val_savings')) document.getElementById('val_savings').innerText = fmt(yearlySavings);
-    if(document.getElementById('val_breakeven')) {
-        if(yearlyGeneration > 0) {
-            document.getElementById('val_breakeven').innerText = roiYears > 0 ? roiYears.toFixed(1) + " Years" : "--";
-        } else {
-            // Don't overwrite breakeven if yearly generation hasn't been calculated yet
-        }
+    // Update ROI
+    if(document.getElementById('fin_roi')) {
+        document.getElementById('fin_roi').innerText = roiYears > 0 ? roiYears.toFixed(1) + " Years" : "N/A";
     }
 
-    // Update CO2 Box (only if we have yearly generation)
-    if(document.getElementById('val_co2') && yearlyGeneration > 0) {
+    // Update CO2 Box (Now in Data Tab)
+    if(document.getElementById('val_co2')) {
         document.getElementById('val_co2').innerText = co2Tonnes.toFixed(1) + " Tonnes";
     }
+    
+    // Summary Tab Updates (Optional sync)
+    if(document.getElementById('val_cost')) document.getElementById('val_cost').innerText = fmt(totalCapEx);
+    if(document.getElementById('val_savings')) document.getElementById('val_savings').innerText = fmt(yearlySavings);
+    if(document.getElementById('val_breakeven')) document.getElementById('val_breakeven').innerText = roiYears > 0 ? roiYears.toFixed(1) + " Years" : "--";
 }
 
 function formatMoney(num) {
@@ -955,6 +962,7 @@ function resetView() {
         'fin_legal': 'USD 0',
         'fin_maint': 'USD 0/yr',
         'fin_total': 'USD 0',
+        'fin_savings': 'USD 0/yr',
         'fin_roi': '--'
     };
     

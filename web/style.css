@@ -31,6 +31,7 @@ body {
 /* --- HUD CONTAINER --- */
 .hud {
     position: absolute; top: 24px; left: 24px; width: 380px;
+    max-height: calc(100vh - 48px);
     background: var(--panel-bg);
     backdrop-filter: blur(16px);
     border: 1px solid var(--border);
@@ -38,6 +39,17 @@ body {
     padding: 24px;
     z-index: 10;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.hud::-webkit-scrollbar { width: 6px; }
+.hud::-webkit-scrollbar-track { background: transparent; }
+.hud::-webkit-scrollbar-thumb { 
+    background: rgba(128, 128, 128, 0.3); 
+    border-radius: 3px; 
+}
+.hud::-webkit-scrollbar-thumb:hover { 
+    background: rgba(128, 128, 128, 0.5); 
 }
 
 /* HEADERS */
@@ -53,6 +65,14 @@ body {
 }
 
 /* INPUTS */
+.input-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: -4px 0 10px 0;
+}
 .input-group { display: flex; gap: 8px; margin-bottom: 16px; }
 
 input, select {
@@ -215,8 +235,17 @@ button:hover { background: #2563eb; transform: translateY(-1px); }
 .reg-link:hover .link-name {
     color: white;
 }
+
 /* CHART */
-.chart-container { height: 200px; width: 100%; margin-top: 10px; }
+.chart-container { height: 200px; width: 100%; margin-top: 10px; position: relative; }
+.chart-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.01);
+}
 
 /* RESET BUTTON */
 .reset-btn {
