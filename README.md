@@ -26,7 +26,7 @@ solAI removes the complexity from solar planning by combining **geospatial analy
 
 Users can:
 - Select **any building globally**
-- Instantly assess **solar viability**
+- Instantly assess **solar viability** considering shade from surrounding buildings
 - Predict **future energy generation**
 - Understand **local regulations, costs, and ROI**
 
