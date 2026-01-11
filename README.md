@@ -30,6 +30,26 @@ Users can:
 - Predict **future energy generation**
 - Understand **local regulations, costs, and ROI**
 
+## AI Models Used
+
+SolAI integrates **three AI models**, each addressing a key barrier to solar adoption:
+
+- **Viability Classification Model**  
+  Evaluates whether a rooftop is suitable for solar installation based on sunlight exposure and shading from nearby buildings.
+
+- **Energy Output Regression Model**  
+  Trained on **NASA solar irradiance data (2000–2023)** to predict monthly and yearly solar energy production for **2026–2027** with high accuracy.
+
+- **LLM-Based Regulation & Financial Model**  
+  Retrieves **location-specific solar regulations**, permits, incentives, and provides a financial breakdown including costs, savings, and return on investment.
+
+## Future vision
+
+- Implementation of satelite imagery to improve clarity, and introduce a new auto select availble area
+- Creation of annother AI model which finds optimal layout for maxiumum efficiency and coverage
+- 3D vizualization of how solar panels will look once installed
+- Intergration of purchasing panels inside the app
+- Improved predictions by taking more factors like local fog, dust accumulation, and degradation of panel efficiency over time
 
 ## Installation
 
