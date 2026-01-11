@@ -515,58 +515,64 @@ async function fetchRegulations(lat, lon) {
 }
 
 async function runMLPrediction(lat, lon) {
-    const chartEl = document.getElementById('energyChart');
-    const loadingEl = document.getElementById('chart-loading');
-    
-    if(!chartEl) {
-        console.error("Chart canvas element not found");
-        return;
-    }
-    
-    // Show loading state with "Predicting" message
-    if(loadingEl) {
-        loadingEl.style.display = 'flex';
-        loadingEl.innerHTML = `
-            <div style="font-size: 13px; color: #94a3b8; margin-bottom: 8px;">Predicting Future Statistics</div>
-            <div style="font-size: 11px; color: #64748b;">Analyzing solar potential for 2026-2027</div>
-        `;
-    }
-    chartEl.style.display = 'none';
-    
-    const ctx = chartEl.getContext('2d');
+    const ctx = document.getElementById('energyChart').getContext('2d');
     if(energyChart) energyChart.destroy();
 
+    // Calculate capacity and score
+    const panel = PANEL_DB[currentPanelId];
+    const numPanels = Math.floor(currentArea / panel.area);
+    const capacity = numPanels * (panel.area * panel.eff);
+    
+    // Get score from DOM element (default to MODERATE if not available)
+    const scoreEl = document.getElementById('via_score');
+    const score = scoreEl && scoreEl.innerText && scoreEl.innerText !== '--' ? scoreEl.innerText : 'MODERATE';
+
+    // 1. Gather Financials (Calculated in recalculate())
+    const totalCost = costHardware + costLabour + costLegal;
+    const maintYearly = costMaint;
+    const rate = earningsPerKwh; // From regulations (e.g. 0.30)
+
     try {
-        console.log("🔮 Requesting ML Prediction...");
+        console.log(`🔮 Requesting ROI: Cap ${capacity}kW | Cost ${totalCost} | Rate ${rate}`);
+        
         const response = await fetch('/api/predict-energy', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lat: lat, lon: lon })
+            body: JSON.stringify({ 
+                lat: lat, lon: lon, 
+                capacity_kw: capacity, 
+                score: score,
+                // SEND FINANCIALS TO BACKEND
+                system_cost: totalCost,
+                maintenance: maintYearly,
+                rate: rate
+            })
         });
         const data = await response.json();
 
-        if(data.success && data.labels && data.monthly_irradiance && data.cumulative_kwh) {
-            console.log("📊 Rendering chart with", data.labels.length, "months");
+        if(data.success) {
             renderMLChart(ctx, data);
-            
-            // Hide loading, show chart
-            if(loadingEl) {
-                loadingEl.style.display = 'none';
+
+            // 2. Update ROI Text
+            if(document.getElementById('fin_roi')) {
+                const years = data.roi_years ? data.roi_years : "N/A";
+                document.getElementById('fin_roi').innerText = years + " Years";
             }
-            chartEl.style.display = 'block';
-        } else {
-            console.error("ML Error:", data.error || "Missing data fields");
-            // Update loading message on error
-            if(loadingEl) {
-                loadingEl.innerHTML = '<div style="font-size: 13px; color: #ef4444;">Unable to generate predictions</div>';
+            if(document.getElementById('val_breakeven')) {
+                 const years = data.roi_years ? data.roi_years : "--";
+                document.getElementById('val_breakeven').innerText = years + " Years";
+            }
+
+            // 3. Update Daily Avg & CO2
+            if(data.monthly_kwh && data.monthly_kwh.length > 0) {
+                const firstYear = data.monthly_kwh.slice(0, 12);
+                const yearTotal = firstYear.reduce((a, b) => a + b, 0);
+                document.getElementById('val_daily').innerText = (yearTotal / 365).toFixed(1);
+                
+                const co2 = (yearTotal * 0.42) / 1000;
+                if(document.getElementById('val_co2')) document.getElementById('val_co2').innerText = co2.toFixed(1) + " Tonnes";
             }
         }
-    } catch(e) { 
-        console.error("Graph API Error", e);
-        // Update loading message on error
-        if(loadingEl) {
-            loadingEl.innerHTML = '<div style="font-size: 13px; color: #ef4444;">Error loading predictions</div>';
-        }
-    }
+    } catch(e) { console.error("ML Error", e); }
 }
 
 function renderMLChart(ctx, data) {
