@@ -26,7 +26,7 @@ solAI removes the complexity from solar planning by combining **geospatial analy
 
 Users can:
 - Select **any building globally**
-- Instantly assess **solar viability** considering shade from surrounding buildings
+- Instantly assess **solar viability**
 - Predict **future energy generation**
 - Understand **local regulations, costs, and ROI**
 
@@ -38,10 +38,10 @@ SolAI integrates **three AI models**, each addressing a key barrier to solar ado
   Evaluates whether a rooftop is suitable for solar installation based on sunlight exposure and shading from nearby buildings.
 
 - **Energy Output Regression Model**  
-  Trained on **NASA solar irradiance data (2000–2023)** to predict monthly and yearly solar energy production for **2026–2027** with high accuracy.
+  Trained on **NASA solar irradiance data** to predict monthly and yearly solar energy production **2 years ahead** with high accuracy.
 
 - **LLM-Based Regulation & Financial Model**  
-  Retrieves **location-specific solar regulations**, permits, incentives, and provides a financial breakdown including costs, savings, and return on investment.
+  Retrieves **location-specific solar regulations**, permits, incentives, and provides a financial breakdown including costs, savings, and return on investment in local currency.
 
 ## Future vision
 
